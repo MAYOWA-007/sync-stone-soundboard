@@ -4,6 +4,8 @@ Sync Stone is a privacy-first, local-pair browser soundboard with a dedicated Co
 
 **Live demo:** https://mayowa-007.github.io/sync-stone-soundboard/
 
+**Public campaign library:** https://mayowa-007.github.io/sync-stone-soundboard/marketing/
+
 ## Boundary first
 
 - Controller and Player must be tabs or windows on this GitHub Pages origin and in the same browser profile.
