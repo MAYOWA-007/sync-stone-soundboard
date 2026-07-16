@@ -11,7 +11,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check js/core.js && node --check js/storage.js && node --check js/audio-engine.js && node --check js/app.js"
+    "check": "node --check js/core.js && node --check js/storage.js && node --check js/audio-engine.js && node --check js/app.js && node --check marketing/gallery.js && node --check marketing/scripts/export-public.mjs && node --check marketing/scripts/verify.mjs",
+    "marketing:verify": "node marketing/scripts/verify.mjs"
   },
   "engines": {
     "node": ">=22"
