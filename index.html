@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en" data-edition="public">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0b0e">
+  <meta name="description" content="A privacy-first local-pair browser soundboard with a dynamically scaling fullscreen Trigger View.">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Sync Stone Soundboard</title>
+  <link rel="icon" href="./sync-stone-mark.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./assets/icons/sync-stone-180.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to soundboard</a>
+
+  <div id="app" class="app-shell" data-view="control">
+    <header class="top-rail" aria-label="Session controls">
+      <a class="brand" href="./" aria-label="Sync Stone home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span><strong>SYNC STONE</strong><small>LOCAL AUDIO CONTROL / BROWSER PAIR</small></span>
+      </a>
+
+      <div class="mode-switch" role="group" aria-label="Workspace mode">
+        <button class="mode-button is-active" type="button" data-mode="edit" aria-pressed="true">Edit</button>
+        <button class="mode-button" type="button" data-mode="perform" aria-pressed="false">Perform</button>
+      </div>
+
+      <button class="readiness-compact" id="readiness-button" type="button" aria-expanded="false" aria-controls="readiness-popover">
+        <span class="mini-stone" aria-hidden="true"></span>
+        <span><small>Primary Player</small><strong id="player-summary">Not connected</strong></span>
+      </button>
+
+      <div class="master-control">
+        <label for="master-level">Master</label>
+        <input id="master-level" type="range" min="-60" max="6" step="1" value="0">
+        <output for="master-level" id="master-output">0 dB</output>
+      </div>
+
+      <button class="utility-button" id="fade-all" type="button">Fade all</button>
+      <button class="danger-button" id="stop-all" type="button">Stop all</button>
+    </header>
+
+    <div class="readiness-popover" id="readiness-popover" hidden>
+      <div class="readiness-heading">
+        <div>
+          <span class="eyebrow">Destination preflight</span>
+          <h2>Primary Player</h2>
+        </div>
+        <button class="icon-button" id="close-readiness" type="button" aria-label="Close readiness details">×</button>
+      </div>
+      <ol class="readiness-list">
+        <li data-check="connected"><span></span><strong>Connected</strong><small>Waiting for the Player window</small></li>
+        <li data-check="audio"><span></span><strong>Audio enabled</strong><small>Requires a click on the playback computer</small></li>
+        <li data-check="revision"><span></span><strong>Correct revision</strong><small>No published board prepared</small></li>
+        <li data-check="visible"><span></span><strong>Player visible</strong><small>Player must remain in the foreground</small></li>
+      </ol>
+      <button class="primary-button full" id="open-player" type="button">Open Player window</button>
+      <button class="primary-button full readiness-live-button" id="readiness-live" type="button" disabled>Enter Live &amp; Trigger View</button>
+      <p class="boundary-note">Local pair mode uses two tabs or windows in this browser profile. It does not control a separate device over the internet.</p>
+    </div>
+
+    <aside class="left-rail" aria-label="Soundboard navigation">
+      <div class="rail-label">Banks</div>
+      <nav id="bank-list" class="bank-list" aria-label="Banks"></nav>
+      <button class="add-bank" id="add-bank" type="button"><span>＋</span> Add bank</button>
+      <div class="rail-spacer"></div>
+      <button class="rail-link" id="show-library" type="button"><span>◫</span> Audio library</button>
+      <button class="rail-link" id="show-notes" type="button"><span>⌁</span> Build notes</button>
+      <div class="public-signature">
+        <span>OPEN SOURCE DEMO</span>
+        <small>Local browser edition</small>
+      </div>
+    </aside>
+
+    <main id="main-content" class="board-stage" tabindex="-1">
+      <div class="board-heading">
+        <div>
+          <span class="eyebrow" id="board-eyebrow">LIVE EVENT / BANK 01</span>
+          <h1 id="board-title">Event Control</h1>
+        </div>
+        <div class="board-actions">
+          <span class="draft-state" id="draft-state"><i></i> Draft saved locally</span>
+          <button class="publish-button" id="publish-board" type="button">Publish revision</button>
+          <button class="utility-button trigger-view-button" id="trigger-view-toggle" type="button">Trigger view</button>
+          <button class="live-button" id="live-toggle" type="button" aria-pressed="false" disabled>
+            <span class="live-lamp"></span><span><small>Session</small><strong>Standby</strong></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="trigger-toolbar" id="trigger-toolbar" aria-label="Fullscreen trigger controls" hidden>
+        <div class="trigger-identity"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><strong>TRIGGER VIEW</strong></div>
+        <label class="trigger-bank"><span>Bank</span><select id="trigger-bank-select" class="select-field"></select></label>
+        <div class="trigger-readiness" aria-live="polite"><span class="mini-stone" aria-hidden="true"></span><span><small>Player</small><strong id="trigger-player-status">Not connected</strong></span></div>
+        <label class="trigger-master"><span>Master</span><input id="trigger-master-level" type="range" min="-60" max="6" step="1" value="0"><output id="trigger-master-output">0 dB</output></label>
+        <button class="utility-button" id="trigger-fade-all" type="button">Fade all</button>
+        <button class="danger-button" id="trigger-stop-all" type="button">Stop all</button>
+        <button class="utility-button trigger-fullscreen" id="trigger-fullscreen" type="button" hidden>Full screen</button>
+        <button class="utility-button trigger-exit" id="exit-trigger-view" type="button" aria-label="Exit fullscreen trigger view">Exit</button>
+      </div>
+
+      <div class="mobile-workspace-controls" aria-label="Mobile workspace controls">
+        <label><span>Bank</span><select id="mobile-bank-select" class="select-field"></select></label>
+        <div class="mobile-mode-switch" role="group" aria-label="Workspace mode">
+          <button class="mobile-mode-button is-active" type="button" data-mobile-mode="edit" aria-pressed="true">Edit</button>
+          <button class="mobile-mode-button" type="button" data-mobile-mode="perform" aria-pressed="false">Perform</button>
+        </div>
+        <label class="mobile-master"><span>Master</span><input id="mobile-master-level" type="range" min="-60" max="6" step="1" value="0"><output id="mobile-master-output">0 dB</output></label>
+      </div>
+
+      <section class="board-grid" id="board-grid" aria-label="Sound pads"></section>
+
+      <div class="empty-guidance" id="empty-guidance" hidden>
+        <strong>This bank is quiet.</strong>
+        <span>Select an empty stone, then add a short audio file in the inspector.</span>
+      </div>
+    </main>
+
+    <aside class="inspector" id="inspector" aria-label="Cue inspector">
+      <div class="inspector-empty" id="inspector-empty">
+        <div class="inspector-stone" aria-hidden="true"></div>
+        <span class="eyebrow">Cue inspector</span>
+        <h2>Select a stone</h2>
+        <p>Edit mode selects a cue without sending sound to the Player.</p>
+      </div>
+
+      <form id="cue-form" class="cue-form" hidden>
+        <div class="inspector-heading">
+          <div>
+            <span class="eyebrow">Cue inspector</span>
+            <h2 id="inspector-title">Cue</h2>
+          </div>
+          <span class="shortcut-chip" id="shortcut-chip">A</span>
+          <button class="icon-button mobile-inspector-close" id="close-inspector" type="button" aria-label="Close cue inspector">×</button>
+        </div>
+
+        <label class="field-label" for="cue-label">Label</label>
+        <input class="text-field" id="cue-label" name="label" maxlength="48" autocomplete="off">
+
+        <label class="field-label" for="cue-file">Audio source</label>
+        <label class="file-drop" for="cue-file">
+          <input id="cue-file" type="file" accept="audio/*" aria-describedby="file-constraints">
+          <strong id="file-name">Choose a file</strong>
+          <span id="file-constraints">250+ researched aliases selectable · real browser decode required · 25 MB / 45 seconds</span>
+        </label>
+
+        <div class="waveform-card" aria-label="Audio waveform preview">
+          <canvas id="waveform" width="360" height="80"></canvas>
+          <div><span id="cue-duration">No audio loaded</span><span>Stored on this device</span></div>
+        </div>
+
+        <label class="field-label" for="trigger-mode">Trigger behavior</label>
+        <select class="select-field" id="trigger-mode" name="triggerMode">
+          <option value="play-stop">Play / Stop</option>
+          <option value="overlap">Play / Overlap</option>
+          <option value="restart">Play / Restart</option>
+          <option value="hold">Hold</option>
+          <option value="loop-stop">Loop / Stop</option>
+        </select>
+
+        <div class="two-fields">
+          <label><span class="field-label">Fade in</span><input id="fade-in" type="number" min="0" max="10" step="0.1" value="0"><small>seconds</small></label>
+          <label><span class="field-label">Fade out</span><input id="fade-out" type="number" min="0" max="10" step="0.1" value="0"><small>seconds</small></label>
+        </div>
+
+        <fieldset class="color-field">
+          <legend class="field-label">Stone color</legend>
+          <div id="color-options" class="color-options"></div>
+        </fieldset>
+
+        <div class="inspector-actions">
+          <button class="utility-button" id="audition-cue" type="button">⌁ Audition here</button>
+          <button class="remove-button" id="clear-cue" type="button">Clear cue</button>
+        </div>
+        <p class="form-status" id="form-status" role="status"></p>
+      </form>
+    </aside>
+
+    <section class="now-playing" aria-label="Now playing">
+      <button class="tray-heading" id="tray-toggle" type="button" aria-expanded="true">
+        <span><i class="pulse-dot"></i> Now playing</span><strong id="voice-count">0 voices</strong><span>⌃</span>
+      </button>
+      <div class="voice-list" id="voice-list"><p>No active cues. Scheduled acknowledgements appear here.</p></div>
+    </section>
+  </div>
+
+  <section id="player-view" class="player-view" hidden aria-labelledby="player-title">
+    <header class="player-header">
+      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>SYNC STONE</strong><small>LOCAL PLAYER</small></span></a>
+      <span class="device-chip">PRIMARY / <strong id="player-device-name">Browser Player</strong></span>
+    </header>
+
+    <main class="player-main">
+      <div class="readiness-stone" id="readiness-stone" data-state="needs-activation" aria-hidden="true">
+        <span class="stone-orbit orbit-one"></span><span class="stone-orbit orbit-two"></span><span class="stone-core"><i></i></span>
+      </div>
+      <span class="eyebrow">Destination state</span>
+      <h1 id="player-title">Needs activation</h1>
+      <p id="player-message">Enable audio locally on this playback computer. A browser cannot do this remotely.</p>
+      <button class="enable-player" id="enable-player" type="button">Enable Player & fullscreen</button>
+      <button class="text-button" id="speaker-test" type="button" disabled>Run speaker test</button>
+      <button class="text-button" id="fullscreen-player" type="button" hidden>Enter fullscreen</button>
+
+      <div class="player-checks" aria-label="Player readiness checks">
+        <span data-player-check="network"><i></i> Local link</span>
+        <span data-player-check="audio"><i></i> Audio</span>
+        <span data-player-check="revision"><i></i> Revision</span>
+        <span data-player-check="wake"><i></i> Wake lock</span>
+      </div>
+
+      <section class="player-cues" aria-live="polite">
+        <span class="eyebrow">Active output</span>
+        <div id="player-cue-list"><p>Silence</p></div>
+      </section>
+    </main>
+
+    <footer class="player-footer">
+      <span>Pair code <strong id="pair-code">—</strong></span>
+      <span id="player-revision">No revision prepared</span>
+      <span id="player-clock">—</span>
+    </footer>
+  </section>
+
+  <dialog id="notes-dialog" class="notes-dialog">
+    <button class="icon-button dialog-close" type="button" aria-label="Close notes">×</button>
+    <span class="eyebrow">Build boundary</span>
+    <h2>What this release proves</h2>
+    <p>This static feasibility build validates local browser audio, immutable board snapshots, same-origin controller/Player messaging, scheduled acknowledgements, and honest destination readiness.</p>
+    <dl>
+      <div><dt>Works now</dt><dd>Upload short audio, edit pads, publish, arm a Player tab, enter Live, trigger and stop cues.</dd></div>
+      <div><dt>Local only</dt><dd>Both windows must share one origin and browser profile. Audio never leaves the device.</dd></div>
+      <div><dt>Network boundary</dt><dd>No accounts, cloud relay, analytics, or cross-device control are included.</dd></div>
+      <div><dt>Browser import boundary</dt><dd>This edition does not convert files. It accepts only audio the active browser successfully decodes.</dd></div>
+    </dl>
+    <a class="primary-button" href="./docs/browser-feasibility.html">Read browser feasibility notes</a>
+  </dialog>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

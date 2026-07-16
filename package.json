@@ -1,0 +1,19 @@
+{
+  "name": "sync-stone-soundboard",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "homepage": "https://mayowa-007.github.io/sync-stone-soundboard/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MAYOWA-007/sync-stone-soundboard.git"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check js/core.js && node --check js/storage.js && node --check js/audio-engine.js && node --check js/app.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

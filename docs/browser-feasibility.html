@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; img-src 'self'; object-src 'none'; base-uri 'self'">
+  <title>Sync Stone browser feasibility notes</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background:#0a0b0e; color:#f5f3ee; }
+    body { max-width: 820px; margin: 0 auto; padding: 48px 24px 80px; line-height: 1.65; }
+    h1,h2 { font-family: Georgia, serif; font-weight: 500; } h1 { font-size: clamp(2.4rem, 7vw, 4.8rem); line-height: .95; }
+    a { color:#d4b47a; } code { color:#78f0b3; } .boundary { padding:20px; border:1px solid #5d4d34; background:#17140f; border-radius:14px; }
+    li { margin:.55rem 0; } footer { margin-top:48px; color:#a5abb5; }
+  </style>
+</head>
+<body>
+  <a href="../">← Back to Sync Stone</a>
+  <h1>Browser feasibility notes</h1>
+  <p class="boundary"><strong>This public edition is a local-pair prototype.</strong> Controller and Player communicate only between browsing contexts on this origin and in the same browser profile. It is not internet remote control and it does not upload audio to a server.</p>
+
+  <h2>Architecture</h2>
+  <p>Controller → <code>BroadcastChannel</code> → Player. The Controller stores a mutable draft and publishes an immutable revision. The Player enables Web Audio after a local click, prepares the exact revision, reports presence, and acknowledges scheduled commands.</p>
+
+  <h2>Readiness</h2>
+  <p>Live is available only when the Player link is fresh, its audio context is running, the published revision is prepared, and the Player is visible. Losing readiness returns the Controller to Standby.</p>
+
+  <h2>Browser limits</h2>
+  <ul>
+    <li>Every cold Player load needs a local Enable Player click because browsers gate audio autoplay.</li>
+    <li>Fullscreen and screen wake lock are requests, not guarantees, and may be denied or released.</li>
+    <li>The public build accepts files up to 25 MB and 45 seconds, preflights duration, and limits decoded audio memory.</li>
+    <li>Extension names are hints. Only a successful browser metadata read and Web Audio decode accepts a cue.</li>
+    <li>Closing, hiding, suspending, or muting a page or computer can make playback unavailable.</li>
+  </ul>
+
+  <h2>Primary references</h2>
+  <ul>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel">MDN: BroadcastChannel</a></li>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay">MDN: media autoplay</a></li>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API">MDN: Screen Wake Lock</a></li>
+    <li><a href="https://www.w3.org/TR/webaudio/">W3C: Web Audio API</a></li>
+  </ul>
+  <footer>Sync Stone public browser edition · No accounts · No analytics · No cloud relay</footer>
+</body>
+</html>
