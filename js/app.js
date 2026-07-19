@@ -1175,7 +1175,7 @@ function initPlayer() {
     if (!audioEnabled) {
       elements.stone.dataset.state = "needs-activation";
       elements.title.textContent = "Needs activation";
-      elements.message.textContent = "Enable audio locally on this playback computer. A browser cannot do this remotely.";
+      elements.message.textContent = "Enable audio with a click on this Player. Browsers require a local user gesture.";
       return;
     }
     if (preparing) return;

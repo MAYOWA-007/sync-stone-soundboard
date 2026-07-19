@@ -10,7 +10,7 @@ Sync Stone is a privacy-first, local-pair browser soundboard with a dedicated Co
 
 - Controller and Player must be tabs or windows on this GitHub Pages origin and in the same browser profile.
 - This repository does not provide cross-device or internet control.
-- It performs no server conversion. A file becomes a cue only after the active browser successfully decodes it.
+- It performs no conversion or upload. A file becomes a cue only after the active browser successfully decodes it.
 - Imported audio remains in browser storage on the current device.
 - There are no accounts, analytics, cloud relay, or external runtime dependencies.
 

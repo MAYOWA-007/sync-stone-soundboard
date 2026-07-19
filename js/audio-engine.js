@@ -242,7 +242,7 @@ export async function inspectAudioFile(file) {
     try {
       buffer = await context.decodeAudioData(await file.arrayBuffer());
     } catch {
-      throw new Error("This browser could not decode that file. The static build verifies real browser support; server conversion is not active here.");
+      throw new Error("This browser could not decode that file. Sync Stone verifies real browser support; an on-device conversion engine is not included yet.");
     }
     if (getDecodedPcmBytes(buffer) > MAX_SINGLE_DECODED_PCM_BYTES) {
       throw new Error("That cue expands beyond the 96 MiB single-file decoded-audio safety limit.");
