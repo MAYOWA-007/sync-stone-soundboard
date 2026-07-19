@@ -26,13 +26,13 @@ jobs:
       - run: npm test
       - run: npm run check
       - run: npm run marketing:verify
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - name: Stage public site
         run: |
           mkdir -p _site
           cp index.html styles.css manifest.webmanifest sw.js sync-stone-mark.svg .nojekyll _site/
           cp -R js assets docs marketing _site/
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
@@ -44,4 +44,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
