@@ -22,7 +22,10 @@ Sync Stone is a privacy-first, local-pair browser soundboard with a dedicated Co
 - Publish an immutable revision, prepare it in the Player, and enter Live only after readiness passes.
 - Fullscreen Trigger View that preserves the 4×4 map and dynamically scales to desktop, mobile, and short landscape viewports.
 - Master gain, Fade all, Stop all, scheduled acknowledgements, disconnect recovery, and an installable offline shell.
+- A fail-closed app-version gate: split Controller/Player shells cannot arm Live or accept cues, and an activated service-worker update disarms the session before either window reloads.
 - A picker exposing 254 researched extension aliases while treating real browser decode success as the only current support decision.
+
+When an offline-shell update activates, each open window shows a persistent reload action. Reload the Controller and Player, then enable Player audio again; local drafts, published revisions, and imported audio remain in browser storage.
 
 ## Run locally
 

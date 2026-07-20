@@ -53,6 +53,7 @@
       </div>
       <ol class="readiness-list">
         <li data-check="connected"><span></span><strong>Connected</strong><small>Waiting for the Player window</small></li>
+        <li data-check="version"><span></span><strong>Same app version</strong><small>Controller and Player must match</small></li>
         <li data-check="audio"><span></span><strong>Audio enabled</strong><small>Requires a click on the playback computer</small></li>
         <li data-check="revision"><span></span><strong>Correct revision</strong><small>No published board prepared</small></li>
         <li data-check="visible"><span></span><strong>Player visible</strong><small>Player must remain in the foreground</small></li>
@@ -206,6 +207,7 @@
 
       <div class="player-checks" aria-label="Player readiness checks">
         <span data-player-check="network"><i></i> Local link</span>
+        <span data-player-check="version"><i></i> App version</span>
         <span data-player-check="audio"><i></i> Audio</span>
         <span data-player-check="revision"><i></i> Revision</span>
         <span data-player-check="wake"><i></i> Wake lock</span>
@@ -237,6 +239,15 @@
     </dl>
     <a class="primary-button" href="./docs/browser-feasibility.html">Read browser feasibility notes</a>
   </dialog>
+
+  <aside class="app-update" id="app-update" role="status" aria-labelledby="app-update-title" hidden>
+    <span class="app-update-stone" aria-hidden="true"><i></i></span>
+    <div>
+      <strong id="app-update-title">Sync Stone update ready</strong>
+      <p id="app-update-message">Reload both windows before returning to Live.</p>
+    </div>
+    <button class="app-update-action" id="app-update-action" type="button">Reload this window</button>
+  </aside>
 
   <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script type="module" src="./js/app.js"></script>

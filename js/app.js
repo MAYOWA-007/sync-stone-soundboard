@@ -34,15 +34,14 @@ const params = new URLSearchParams(location.search);
 const isPlayer = params.get("view") === "player";
 const roomCode = getRoomCode(params.get("room"));
 const channel = "BroadcastChannel" in globalThis ? new BroadcastChannel(`${APP_NAMESPACE}:room:${roomCode}`) : null;
+const APP_UPDATE_EVENT = "sync-stone:update-required";
+let pendingAppUpdateVersion = null;
+document.body.dataset.view = isPlayer ? "player" : "controller";
 
 if (isPlayer) initPlayer();
 else initController();
-
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  addEventListener("load", () => navigator.serviceWorker.register(new URL("../sw.js", import.meta.url)).catch((error) => {
-    console.warn("Sync Stone offline shell could not register.", error);
-  }));
-}
+setupAppUpdateUi();
+registerOfflineShell();
 
 function initController() {
   const app = document.querySelector("#app");
@@ -132,7 +131,11 @@ function initController() {
   renderAll();
   updateReadiness();
   setInterval(updatePresenceFreshness, 2_000);
-  setInterval(() => channel?.postMessage({ type: "controller.presence", targetDeviceId: primaryDeviceId, sentAt: Date.now() }), 2_000);
+  setInterval(() => channel?.postMessage({ type: "controller.presence", appVersion: APP_VERSION, targetDeviceId: primaryDeviceId, sentAt: Date.now() }), 2_000);
+  addEventListener(APP_UPDATE_EVENT, () => {
+    if (runtime.mode === "live") setSessionMode("standby", "An app update is ready. Live was disarmed until both windows reload.");
+    else updateReadiness();
+  });
 
   channel?.addEventListener("message", ({ data }) => {
     if (!data || typeof data !== "object") return;
@@ -714,7 +717,13 @@ function initController() {
 
   function updateReadiness() {
     const readiness = computeReadiness(presence, revision);
-    const summary = readiness.ready ? "Ready" : readiness.connected ? presence?.stateLabel || "Needs attention" : "Not connected";
+    const summary = readiness.ready
+      ? "Ready"
+      : readiness.connected && !readiness.version
+        ? "Update required"
+        : readiness.connected
+          ? presence?.stateLabel || "Needs attention"
+          : "Not connected";
     elements.playerSummary.textContent = summary;
     elements.triggerPlayerStatus.textContent = summary;
     elements.triggerPlayerStatus.closest(".trigger-readiness").classList.toggle("is-ready", readiness.ready);
@@ -725,6 +734,7 @@ function initController() {
 
     const details = {
       connected: [readiness.connected, readiness.connected ? "Local controller link active" : "Waiting for the Player window"],
+      version: [readiness.version, readiness.version ? `Both windows use ${APP_VERSION}` : readiness.connected ? "Reload both windows so their app versions match" : "Waiting for the Player app version"],
       audio: [readiness.audio, readiness.audio ? "AudioContext is running" : "Requires a click on the playback computer"],
       revision: [readiness.revision, readiness.revision ? revision?.id : revision ? "Player is preparing the published board" : "Publish a board revision"],
       visible: [readiness.visible, readiness.visible ? "Player page is visible" : "Player must remain in the foreground"],
@@ -885,7 +895,7 @@ function initController() {
 
   function postToPlayer(message) {
     if (!channel || !primaryDeviceId) return;
-    channel.postMessage({ ...message, targetDeviceId: primaryDeviceId });
+    channel.postMessage({ ...message, appVersion: APP_VERSION, targetDeviceId: primaryDeviceId });
   }
 
   function getPerformancePad(padId) {
@@ -916,6 +926,7 @@ function initPlayer() {
   let preparing = false;
   let prepareGeneration = 0;
   let controllerSeenAt = 0;
+  let controllerVersion = null;
   const seenEvents = new Set();
   const runtime = {
     mode: "standby",
@@ -946,6 +957,15 @@ function initPlayer() {
     },
   });
 
+  addEventListener(APP_UPDATE_EVENT, async () => {
+    runtime.mode = "standby";
+    runtime.epoch += 1;
+    runtime.stopGeneration += 1;
+    await engine.stopAll(0.03);
+    renderPlayerState();
+    sendPresence();
+  });
+
   addEventListener("pagehide", () => {
     channel?.postMessage({ type: "player.offline", deviceId, sentAt: Date.now() });
   });
@@ -966,11 +986,13 @@ function initPlayer() {
     if (data.targetDeviceId && data.targetDeviceId !== deviceId) return;
     if (data.type === "controller.presence") {
       controllerSeenAt = Date.now();
+      controllerVersion = data.appVersion || null;
       renderPlayerState();
       return;
     }
     if (["revision.prepare", "session.set", "master.set", "runtime.stop-all", "runtime.fade-all", "command"].includes(data.type)) {
       controllerSeenAt = Date.now();
+      controllerVersion = data.appVersion || null;
     }
     if (data.type === "revision.prepare") {
       const generation = ++prepareGeneration;
@@ -1055,7 +1077,7 @@ function initPlayer() {
     sendPresence();
   });
 
-  channel?.postMessage({ type: "player.request-state", roomCode, version: APP_VERSION, deviceId });
+  channel?.postMessage({ type: "player.request-state", roomCode, version: APP_VERSION, appVersion: APP_VERSION, deviceId });
   renderPlayerState();
   sendPresence();
 
@@ -1099,6 +1121,7 @@ function initPlayer() {
     const receivedAt = Date.now();
     const eligibility = isCommandEligible(command, runtime, receivedAt);
     if (!eligibility.ok) return rejectCommand(command, eligibility.code, receivedAt);
+    if (controllerVersion !== APP_VERSION) return rejectCommand(command, "VERSION_MISMATCH", receivedAt);
     if (!audioEnabled || engine.state !== "running") return rejectCommand(command, "AUDIO_LOCKED", receivedAt);
     if (document.visibilityState !== "visible") return rejectCommand(command, "PLAYER_HIDDEN", receivedAt);
     if (!assetsPrepared || revision?.id !== command.revisionId) return rejectCommand(command, "NOT_READY", receivedAt);
@@ -1150,7 +1173,7 @@ function initPlayer() {
   }
 
   function readiness() {
-    return controllerConnected() && audioEnabled && engine.state === "running" && assetsPrepared && revision?.id === runtime.revisionId && document.visibilityState === "visible";
+    return controllerConnected() && controllerVersion === APP_VERSION && audioEnabled && engine.state === "running" && assetsPrepared && revision?.id === runtime.revisionId && document.visibilityState === "visible";
   }
 
   function controllerConnected() {
@@ -1161,6 +1184,7 @@ function initPlayer() {
     const isReady = readiness();
     const isArmed = isReady && runtime.mode === "live";
     setPlayerCheck("network", controllerConnected());
+    setPlayerCheck("version", controllerVersion === APP_VERSION);
     setPlayerCheck("audio", audioEnabled && engine.state === "running");
     setPlayerCheck("revision", assetsPrepared && revision?.id === runtime.revisionId);
     setPlayerCheck("wake", Boolean(wakeLock));
@@ -1169,6 +1193,13 @@ function initPlayer() {
       elements.stone.dataset.state = "syncing";
       elements.title.textContent = "Waiting for controller";
       elements.message.textContent = "Open the paired Control Studio in this browser profile.";
+      return;
+    }
+
+    if (controllerVersion !== APP_VERSION) {
+      elements.stone.dataset.state = "needs-activation";
+      elements.title.textContent = "App update required";
+      elements.message.textContent = "Reload the Control Studio and this Player so both windows use the same Sync Stone version.";
       return;
     }
 
@@ -1221,6 +1252,7 @@ function initPlayer() {
   function buildPresence(error) {
     return {
       deviceId,
+      appVersion: APP_VERSION,
       state: readiness() ? (runtime.mode === "live" ? "armed" : "ready") : audioEnabled ? "degraded" : "needs_activation",
       stateLabel: readiness() ? (runtime.mode === "live" ? "Armed" : "Ready") : audioEnabled ? "Needs attention" : "Needs activation",
       visibility: document.visibilityState,
@@ -1265,6 +1297,74 @@ function initPlayer() {
       await document.documentElement.requestFullscreen().catch(() => {});
     }
   }
+}
+
+function setupAppUpdateUi() {
+  const panel = document.querySelector("#app-update");
+  const message = document.querySelector("#app-update-message");
+  const action = document.querySelector("#app-update-action");
+  if (!panel || !message || !action) return;
+
+  channel?.addEventListener("message", ({ data }) => {
+    if (data?.type === "app.update-ready") presentAppUpdate(data.version, { broadcast: false });
+  });
+
+  action.addEventListener("click", async () => {
+    action.disabled = true;
+    action.textContent = "Reloading…";
+    channel?.postMessage({ type: "app.update-ready", version: pendingAppUpdateVersion, sentAt: Date.now() });
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration(new URL("../", import.meta.url));
+      registration?.waiting?.postMessage({ type: "sync-stone.skip-waiting" });
+      await registration?.update();
+    } catch {
+      // Reload still uses the newest activated offline shell when the network is unavailable.
+    }
+    location.reload();
+  });
+}
+
+function presentAppUpdate(version, { broadcast = true } = {}) {
+  if (!version || version === APP_VERSION) return;
+  const firstNotice = pendingAppUpdateVersion !== version;
+  pendingAppUpdateVersion = version;
+  const panel = document.querySelector("#app-update");
+  const message = document.querySelector("#app-update-message");
+  const action = document.querySelector("#app-update-action");
+  if (!panel || !message || !action) return;
+
+  message.textContent = isPlayer
+    ? "Reload this Player, then enable audio again. Reload the Control Studio before returning to Live."
+    : "Live is disarmed. Reload this Control Studio and the Player before returning to Live; local boards and audio stay on this device.";
+  action.textContent = isPlayer ? "Reload Player" : "Reload Control Studio";
+  action.disabled = false;
+  panel.hidden = false;
+  document.documentElement.dataset.updateReady = "true";
+
+  if (!firstNotice) return;
+  dispatchEvent(new CustomEvent(APP_UPDATE_EVENT, { detail: { version } }));
+  if (broadcast) channel?.postMessage({ type: "app.update-ready", version, sentAt: Date.now() });
+}
+
+function registerOfflineShell() {
+  if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) return;
+
+  const requestShellVersion = () => {
+    navigator.serviceWorker.controller?.postMessage({ type: "sync-stone.shell-version.request" });
+  };
+  navigator.serviceWorker.addEventListener("message", ({ data }) => {
+    if (["sync-stone.shell-active", "sync-stone.shell-version"].includes(data?.type)) presentAppUpdate(data.version);
+  });
+  navigator.serviceWorker.addEventListener("controllerchange", requestShellVersion);
+  addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register(new URL("../sw.js", import.meta.url));
+      await registration.update();
+      requestShellVersion();
+    } catch (error) {
+      console.warn("Sync Stone offline shell could not register.", error);
+    }
+  });
 }
 
 function drawWaveform(canvas, peaks = [], color = "slate", synth = false) {

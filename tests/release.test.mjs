@@ -3,6 +3,7 @@ import { readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (path, encoding = "utf8") => readFileSync(resolve(root, path), encoding);
@@ -34,6 +35,65 @@ test("service-worker shell contains only files that exist", () => {
   assert.ok(paths.includes("./assets/icons/sync-stone-512.png"));
   for (const path of paths.filter((candidate) => candidate !== "./")) {
     assert.ok(statSync(resolve(root, path.slice(2))).size > 0, `missing shell asset: ${path}`);
+  }
+  assert.match(worker, /const SHELL_VERSION = "0\.2\.0"/);
+  assert.match(worker, /sync-stone\.shell-version\.request/);
+  assert.match(worker, /clients\.matchAll\(\{ type: "window", includeUncontrolled: true \}\)/);
+});
+
+test("service worker reports its version and notifies every open app window on activation", async () => {
+  const handlers = new Map();
+  const posted = [];
+  let claimed = false;
+  const self = {
+    registration: { scope: "https://example.test/sync-stone-soundboard/" },
+    location: { origin: "https://example.test" },
+    clients: {
+      claim: async () => { claimed = true; },
+      matchAll: async () => [{ postMessage: (message) => posted.push(message) }],
+    },
+    addEventListener: (type, handler) => handlers.set(type, handler),
+    skipWaiting: async () => {},
+  };
+  runInNewContext(read("sw.js"), {
+    self,
+    caches: { keys: async () => [], delete: async () => true },
+    fetch: async () => { throw new Error("not used"); },
+    URL,
+  });
+
+  const replies = [];
+  handlers.get("message")({
+    data: { type: "sync-stone.shell-version.request" },
+    source: { postMessage: (message) => replies.push(message) },
+  });
+  assert.equal(replies[0].type, "sync-stone.shell-version");
+  assert.equal(replies[0].version, "0.2.0");
+
+  let activation;
+  handlers.get("activate")({ waitUntil: (promise) => { activation = promise; } });
+  await activation;
+  assert.equal(claimed, true);
+  assert.equal(posted[0].type, "sync-stone.shell-active");
+  assert.equal(posted[0].version, "0.2.0");
+});
+
+test("release fails closed across split app versions and keeps an accessible update action", () => {
+  const html = read("index.html");
+  const app = read("js/app.js");
+  assert.match(html, /data-check="version"/);
+  assert.match(html, /data-player-check="version"/);
+  assert.match(html, /id="app-update" role="status"/);
+  assert.match(html, /id="app-update-action"/);
+  assert.match(app, /VERSION_MISMATCH/);
+  assert.match(app, /sync-stone:update-required/);
+});
+
+test("runtime preserves the no-egress contract", () => {
+  const html = read("index.html");
+  assert.match(html, /connect-src 'self'/);
+  for (const file of ["index.html", "js/app.js", "js/core.js", "js/storage.js", "js/audio-engine.js", "sw.js"]) {
+    assert.doesNotMatch(read(file), /https?:\/\//i, `${file} contains an external runtime URL`);
   }
 });
 

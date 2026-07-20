@@ -1,5 +1,6 @@
 const CACHE_PREFIX = "sync-stone-soundboard-public-shell-";
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const SHELL_VERSION = "0.2.0";
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const SCOPE_PATH = new URL(self.registration.scope).pathname;
 const SHELL = [
   "./",
@@ -25,7 +26,15 @@ self.addEventListener("activate", (event) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
+      .then(() => notifyClients("sync-stone.shell-active"))
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "sync-stone.shell-version.request") {
+    event.source?.postMessage({ type: "sync-stone.shell-version", version: SHELL_VERSION });
+  }
+  if (event.data?.type === "sync-stone.skip-waiting") self.skipWaiting();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -46,3 +55,8 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
+
+async function notifyClients(type) {
+  const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  for (const client of windows) client.postMessage({ type, version: SHELL_VERSION });
+}
