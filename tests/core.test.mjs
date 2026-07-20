@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  APP_VERSION,
   IMPORT_ACCEPT_VALUE,
   IMPORT_EXTENSION_ALIASES,
   cleanLabel,
@@ -57,15 +58,18 @@ test("readiness is true only for a fresh visible Player on the exact revision", 
   const revision = { id: "rev-1" };
   const readyPresence = {
     seenAt: now,
+    appVersion: APP_VERSION,
     audioContextState: "running",
     revisionId: "rev-1",
     assetsPrepared: true,
     visibility: "visible",
   };
   const ready = computeReadiness(readyPresence, revision);
-  assert.deepEqual(ready, { connected: true, audio: true, revision: true, visible: true, ready: true });
+  assert.deepEqual(ready, { connected: true, version: true, audio: true, revision: true, visible: true, ready: true });
 
   assert.equal(computeReadiness({ ...readyPresence, seenAt: now - 10_000 }, revision).ready, false);
+  assert.equal(computeReadiness({ ...readyPresence, appVersion: "0.1.0" }, revision).version, false);
+  assert.equal(computeReadiness({ ...readyPresence, appVersion: "0.1.0" }, revision).ready, false);
   assert.equal(computeReadiness({ seenAt: now, audioContextState: "suspended", revisionId: "rev-1", assetsPrepared: true, visibility: "visible" }, revision).ready, false);
 });
 

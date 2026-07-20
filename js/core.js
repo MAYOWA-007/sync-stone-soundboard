@@ -1,4 +1,4 @@
-export const APP_VERSION = "0.1.0-feasibility";
+export const APP_VERSION = "0.2.0";
 export const APP_NAMESPACE = "sync-stone-soundboard-public:v1";
 export const STORAGE_KEY = `${APP_NAMESPACE}:state`;
 export const REVISION_KEY = `${APP_NAMESPACE}:published`;
@@ -275,17 +275,19 @@ export function getPad(board, padId) {
   return null;
 }
 
-export function computeReadiness(presence, revision) {
+export function computeReadiness(presence, revision, expectedVersion = APP_VERSION) {
   const connected = Boolean(presence && Date.now() - Number(presence.seenAt || 0) < 8_000);
+  const version = connected && presence.appVersion === expectedVersion;
   const audio = connected && presence.audioContextState === "running";
   const revisionMatch = audio && Boolean(revision?.id) && presence.revisionId === revision.id && presence.assetsPrepared === true;
   const visible = connected && presence.visibility === "visible";
   return {
     connected,
+    version,
     audio,
     revision: revisionMatch,
     visible,
-    ready: connected && audio && revisionMatch && visible,
+    ready: connected && version && audio && revisionMatch && visible,
   };
 }
 

@@ -23,7 +23,7 @@
   <p>Controller → <code>BroadcastChannel</code> → Player. The Controller stores a mutable draft and publishes an immutable revision. The Player enables Web Audio after a local click, prepares the exact revision, reports presence, and acknowledges scheduled commands.</p>
 
   <h2>Readiness</h2>
-  <p>Live is available only when the Player link is fresh, its audio context is running, the published revision is prepared, and the Player is visible. Losing readiness returns the Controller to Standby.</p>
+  <p>Live is available only when the Player link is fresh, both windows advertise the same app version, its audio context is running, the published revision is prepared, and the Player is visible. Losing readiness returns the Controller to Standby. A newly activated offline shell stops Player output and keeps an explicit reload action visible; reload is never forced during Live.</p>
 
   <h2>Browser limits</h2>
   <ul>
